@@ -14,7 +14,7 @@ app.use(cookieParser())
 // CORS configuration - allow frontend origins and credentials (cookies)
 const allowedOrigins = [
     'http://localhost:5173',
-    'https://apex-ai.netlify.app',
+    'https://apex-agent.netlify.app',
 ]
 
 app.use(cors({

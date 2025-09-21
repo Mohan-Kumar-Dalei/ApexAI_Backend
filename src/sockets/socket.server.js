@@ -8,7 +8,7 @@ const messageModel = require("../models/message.model");
 const initSocketServer = (httpServer) => {
     const io = new Server(httpServer, {
         cors: {
-            origin: ["http://localhost:5173", "https://apex-ai.netlify.app"],
+            origin: ["http://localhost:5173", "https://apex-agent.netlify.app"],
             methods: ["GET", "POST"],
             credentials: true
         }
