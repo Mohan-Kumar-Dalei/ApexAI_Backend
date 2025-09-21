@@ -28,6 +28,9 @@ const registerUser = async (req, res) => {
     })
     const token = jwt.sign({
         id: user._id,
+        httpOnly: true,
+        secure: true,
+        sameSite: 'none',
     }, process.env.JWT_SECRET, { expiresIn: '2 years' })
     res.cookie('token', token)
     res.status(200).json({
@@ -62,6 +65,9 @@ const loginUser = async (req, res) => {
     }
     const token = jwt.sign({
         id: user._id,
+        httpOnly: true,
+        secure: true,
+        sameSite: 'none',
     }, process.env.JWT_SECRET, { expiresIn: '2 years' })
     res.cookie('token', token)
     res.status(200).json({
@@ -82,9 +88,7 @@ const getUser = async (req, res) => {
     const token = cookies.token;
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        const user = await userModel.findOne({
-            _id: decoded.id
-        });
+        const user = await userModel.findOne(decoded.id);
         if (!user) {
             return res.status(404).json({
                 message: "User not found"
@@ -105,11 +109,6 @@ const getUser = async (req, res) => {
         });
     }
 }
-
-
-
-
-
 
 module.exports = {
     registerUser,
