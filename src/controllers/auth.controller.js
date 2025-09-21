@@ -83,7 +83,7 @@ const getUser = async (req, res) => {
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         const user = await userModel.findOne({
-            id: decoded._id
+            _id: decoded.id
         });
         if (!user) {
             return res.status(404).json({
