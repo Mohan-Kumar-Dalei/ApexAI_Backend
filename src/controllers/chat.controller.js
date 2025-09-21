@@ -18,6 +18,39 @@ const createChat = async (req, res) => {
     })
 }
 
-module.exports = {
-    createChat
+const getChats = async (req, res) => {
+    try {
+        const user = req.user
+        const chats = await chatModel.find({
+            user: user._id
+        }).sort({ lastActivity: -1 }).lean()
+        return res.status(200).json({
+            chats
+        })
+    } catch (error) {
+        return res.status(500).json({
+            message: 'Failed to fetch chats'
+        })
+    }
 }
+
+module.exports = {
+    createChat,
+    getChats
+}
+
+const messageModel = require('../models/message.model')
+
+const getMessages = async (req, res) => {
+    try {
+        const { chatId } = req.params
+        const user = req.user
+        // ensure the chat belongs to the user? optional check
+        const messages = await messageModel.find({ chat: chatId }).sort({ createdAt: 1 }).lean()
+        return res.status(200).json({ messages })
+    } catch (error) {
+        return res.status(500).json({ message: 'Failed to fetch messages' })
+    }
+}
+
+module.exports.getMessages = getMessages
