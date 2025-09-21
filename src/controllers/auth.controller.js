@@ -28,11 +28,14 @@ const registerUser = async (req, res) => {
     })
     const token = jwt.sign({
         id: user._id,
-        httpOnly: true,
-        secure: true,
-        sameSite: 'none',
     }, process.env.JWT_SECRET, { expiresIn: '2 years' })
-    res.cookie('token', token)
+
+    res.cookie('token', token, {
+        httpOnly: true,
+        secure: false,
+        sameSite: 'lax',
+        maxAge: 30 * 24 * 60 * 60 * 1000
+    })
     res.status(200).json({
         message: "User registered successfully",
         user: {
@@ -65,11 +68,15 @@ const loginUser = async (req, res) => {
     }
     const token = jwt.sign({
         id: user._id,
-        httpOnly: true,
-        secure: true,
-        sameSite: 'none',
     }, process.env.JWT_SECRET, { expiresIn: '2 years' })
-    res.cookie('token', token)
+
+    res.cookie('token', token, {
+        httpOnly: true,
+        secure: false,
+        sameSite: 'lax',
+        maxAge: 30 * 24 * 60 * 60 * 1000
+    })
+
     res.status(200).json({
         message: "User logged in successfully",
         user: {
@@ -81,11 +88,10 @@ const loginUser = async (req, res) => {
 }
 
 const getUser = async (req, res) => {
-    const cookies = req.cookies;
-    if (!cookies?.token) {
+    const { token } = req.cookies;
+    if (!token) {
         return res.status(401).json({ message: "No token found" });
     }
-    const token = cookies.token;
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         const user = await userModel.findById(decoded.id);
