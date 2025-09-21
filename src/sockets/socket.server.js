@@ -6,7 +6,13 @@ const { generateResponse, generateVector } = require("../services/ai.service");
 const { createMemory, queryMemory } = require("../services/vector.service");
 const messageModel = require("../models/message.model");
 const initSocketServer = (httpServer) => {
-    const io = new Server(httpServer, {})
+    const io = new Server(httpServer, {
+        cors: {
+            origin: "*",
+            methods: ["GET", "POST"],
+            credentials: true
+        }
+    })
     io.use(async (socket, next) => {
         const cookies = cookie.parse(socket.handshake.headers?.cookie || "")
         if (!cookies.token) {
