@@ -74,8 +74,37 @@ const loginUser = async (req, res) => {
     })
 }
 
-
-
+const getUser = async (req, res) => {
+    const cookies = req.cookies;
+    if (!cookies?.token) {
+        return res.status(401).json({ message: "No token found" });
+    }
+    const token = cookies.token;
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const user = await userModel.findOne({
+            id: decoded._id
+        });
+        if (!user) {
+            return res.status(404).json({
+                message: "User not found"
+            });
+        }
+        res.status(200).json({
+            message: "User fetched successfully",
+            user: {
+                _id: user._id,
+                fullName: user.fullName,
+                email: user.email,
+            }
+        });
+    } catch (error) {
+        console.error("Error fetching user data:", error);
+        res.status(500).json({
+            message: "Internal server error"
+        });
+    }
+}
 
 
 
@@ -84,5 +113,6 @@ const loginUser = async (req, res) => {
 
 module.exports = {
     registerUser,
-    loginUser
+    loginUser,
+    getUser
 }
