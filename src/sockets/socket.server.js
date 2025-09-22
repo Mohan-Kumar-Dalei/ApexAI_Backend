@@ -1,62 +1,63 @@
 const { Server } = require("socket.io");
-const cookie = require("cookie");
+const cookie = require("cookie")
 const jwt = require("jsonwebtoken");
 const userModel = require("../models/user.model");
-const { generateResponse, generateVector } = require("../services/ai.service");
-const { createMemory, queryMemory } = require("../services/vector.service");
+const aiService = require("../services/ai.service")
 const messageModel = require("../models/message.model");
-const initSocketServer = (httpServer) => {
+const { createMemory, queryMemory } = require("../services/vector.service")
+
+
+function initSocketServer(httpServer) {
+
     const io = new Server(httpServer, {
         cors: {
             origin: ["http://localhost:5173", "https://apex-agent.netlify.app"],
             methods: ["GET", "POST"],
+            allowedHeaders: ["Content-Type", "Authorization"],
             credentials: true
         }
     })
+
     io.use(async (socket, next) => {
-        const cookies = cookie.parse(socket.handshake.headers?.cookie || "")
+
+        const cookies = cookie.parse(socket.handshake.headers?.cookie || "");
+
         if (!cookies.token) {
-            next(new Error("Authentication Error: No Token Found"))
+            next(new Error("Authentication error: No token provided"));
         }
+
         try {
-            const decoded = jwt.verify(cookies.token, process.env.JWT_SECRET)
-            const user = await userModel.findOne({
-                id: decoded._id
-            })
+
+            const decoded = jwt.verify(cookies.token, process.env.JWT_SECRET);
+
+            const user = await userModel.findById(decoded.id);
+
             socket.user = user
+
             next()
-        } catch (error) {
-            next(new Error("Authentication Error: Invalid Token"))
+
+        } catch (err) {
+            next(new Error("Authentication error: Invalid token"));
         }
 
-    }) //-> Middleware for Authentication socket io
-
+    })
 
     io.on("connection", (socket) => {
-        socket.on('ai-message', async (messagePayload) => {
-            /*
-            const userMessage = await messageModel.create({
-                chat: messagePayload.chat,
-                user: socket.user._id,
-                content: messagePayload.content,
-                role: "user"
-            })
-
-            const vectors = await generateVector(messagePayload.content)
-            */
-            // Optimization
-            const [userMessage, vectors] = await Promise.all([
+        socket.on("ai-message", async (messagePayload) => {
+            /* messagePayload = { chat:chatId,content:message text } */
+            const [message, vectors] = await Promise.all([
                 messageModel.create({
                     chat: messagePayload.chat,
                     user: socket.user._id,
                     content: messagePayload.content,
                     role: "user"
                 }),
-                generateVector(messagePayload.content),
+                aiService.generateVector(messagePayload.content),
             ])
+
             await createMemory({
                 vectors,
-                messageId: userMessage._id,
+                messageId: message._id,
                 metadata: {
                     chat: messagePayload.chat,
                     user: socket.user._id,
@@ -64,24 +65,27 @@ const initSocketServer = (httpServer) => {
                 }
             })
 
-            const memory = await queryMemory({
-                queryVector: vectors,
-                limit: 3,
-                metadata: {
-                    user: socket.user._id
-                }
-            })
-            
-            const formattedMemory = memory.map(item => { item.metadata.text }).join('\n')
-            const chatHistory = (await messageModel.find({
-                chat: messagePayload.chat
-            }).sort({ createdAt: 1 }).limit(100).lean()).reverse();
 
-            const sortTermMemory = chatHistory.map((item) => {
-                return ({
+            const [memory, chatHistory] = await Promise.all([
+
+                queryMemory({
+                    queryVector: vectors,
+                    limit: 3,
+                    metadata: {
+                        user: socket.user._id
+                    }
+                }),
+
+                messageModel.find({
+                    chat: messagePayload.chat
+                }).sort({ createdAt: -1 }).limit(20).lean().then(messages => messages.reverse())
+            ])
+
+            const sortTermMemory = chatHistory.map(item => {
+                return {
                     role: item.role,
                     parts: [{ text: item.content }]
-                })
+                }
             })
 
             const longTermMemory = [
@@ -89,62 +93,49 @@ const initSocketServer = (httpServer) => {
                     role: "user",
                     parts: [{
                         text: `
-                            these are some previous message from chat, use them to generate response
-                            ${formattedMemory}
+                        these are some previous messages from the chat, use them to generate a response
+
+                        ${memory.map(item => item.metadata.text).join("\n")}
+                        
                         ` }]
                 }
             ]
 
-            const aiResponse = await generateResponse([...sortTermMemory, ...longTermMemory])
 
-            socket.emit("ai-response", {
-                content: aiResponse,
+            const response = await aiService.generateResponse([...longTermMemory, ...sortTermMemory])
+
+
+
+
+            socket.emit('ai-response', {
+                content: response,
                 chat: messagePayload.chat
             })
-            /*
-            const aiMessage = await messageModel.create({
-                chat: messagePayload.chat,
-                user: socket.user._id,
-                content: aiResponse,
-                role: "model"
-            })
 
-            const responseVectors = await generateVector(aiResponse)
-
-            await createMemory({
-                messageId: aiMessage._id,
-                vectors: responseVectors,
-                metadata: {
-                    chat: messagePayload.chat,
-                    user: socket.user._id,
-                    text: aiResponse
-                }
-
-            })
-            */
-            // Optimization
-            const [aiMessage, responseVectors] = await Promise.all([
+            const [responseMessage, responseVectors] = await Promise.all([
                 messageModel.create({
                     chat: messagePayload.chat,
                     user: socket.user._id,
-                    content: aiResponse,
+                    content: response,
                     role: "model"
                 }),
-                generateVector(aiResponse),
+                aiService.generateVector(response)
             ])
 
             await createMemory({
-                messageId: aiMessage._id,
                 vectors: responseVectors,
+                messageId: responseMessage._id,
                 metadata: {
                     chat: messagePayload.chat,
                     user: socket.user._id,
-                    text: aiResponse
+                    text: response
                 }
-
             })
-        })
-    })
 
+        })
+
+    })
 }
+
+
 module.exports = initSocketServer;
