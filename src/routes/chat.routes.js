@@ -8,7 +8,7 @@ router.post('/chat', authUser, createChat) // localhost:3000/api/chat
 // GET /api/chat 
 router.get('/chat', authUser, getChats) // localhost:3000/api/chat
 // GET /api/chat/:chatId/messages
-router.get('/chat/:chatId/messages', authUser, getMessages) // localhost:3000/api/chat/:chatId/messages
+router.get('/chat/:id/messages', authUser, getMessages) // localhost:3000/api/chat/:chatId/messages
 
 
 
