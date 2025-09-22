@@ -71,20 +71,11 @@ const initSocketServer = (httpServer) => {
                     user: socket.user._id
                 }
             })
-
-            await createMemory({
-                vectors,
-                messageId: userMessage._id,
-                metadata: {
-                    chat: messagePayload.chat,
-                    user: socket.user._id,
-                    text: messagePayload.content
-                }
-            })
+            
             const formattedMemory = memory.map(item => { item.metadata.text }).join('\n')
             const chatHistory = (await messageModel.find({
                 chat: messagePayload.chat
-            }).sort({ createdAt: 1 }).limit(20).lean()).reverse();
+            }).sort({ createdAt: 1 }).limit(100).lean()).reverse();
 
             const sortTermMemory = chatHistory.map((item) => {
                 return ({

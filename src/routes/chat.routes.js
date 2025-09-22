@@ -1,8 +1,7 @@
 const express = require('express')
 const router = express.Router();
 const { authUser } = require('../middlewares/auth.middleware')
-const { createChat, getChats } = require('../controllers/chat.controller')
-const { getMessages } = require('../controllers/chat.controller')
+const { createChat, getChats, getMessages } = require('../controllers/chat.controller')
 
 // POST /api/chat
 router.post('/chat', authUser, createChat) // localhost:3000/api/chat
