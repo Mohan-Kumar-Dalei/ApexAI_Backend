@@ -7,7 +7,7 @@ const ai = new GoogleGenAI({})
 async function generateResponse(content) {
 
     const response = await ai.models.generateContent({
-        model: "gemini-2.0-flash",
+        model: "gemini-2.5-flash-lite",
         contents: content,
         config: {
             temperature: 0.7,

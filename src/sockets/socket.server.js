@@ -43,6 +43,8 @@ function initSocketServer(httpServer) {
     })
 
     io.on("connection", (socket) => {
+        console.log(`User connected: ${socket}`);
+        
         socket.on("ai-message", async (messagePayload) => {
             /* messagePayload = { chat:chatId,content:message text } */
             const [message, vectors] = await Promise.all([
